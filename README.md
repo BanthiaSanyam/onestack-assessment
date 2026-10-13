@@ -5,6 +5,8 @@ A grounded question-answering assistant over the merchant policy documents in `a
 ## How to run
 
 Python 3.10+, standard library only. No install, no API key, works offline.
+use can use python ask.py to ask you own question's from terminal.
+some demo question are given below.
 
 ```bash
 python ask.py --demo                                   # the brief's Q1–Q8
