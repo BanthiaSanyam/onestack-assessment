@@ -1,13 +1,4 @@
-"""Date-versioned policy rules.
-
-Each function answers "what does the policy in force on `as_of` say about X?" and returns
-the value together with the clauses it rests on and any supersession that happened
-(old clause -> new clause), so the assistant can report CONFLICT_RESOLVED honestly.
-
-Dates come from the document headers (DECISIONS D1-D4). Effective dates are inclusive.
-"""
 from __future__ import annotations
-
 from dataclasses import dataclass, field
 from datetime import date
 from decimal import Decimal
@@ -67,7 +58,7 @@ def upi_settlement(as_of: date) -> Rule:
     if circular_in_force(as_of):
         return Rule(
             {"instant_addon": "T+0 (same day, by 11:59 PM)", "default": "T+1 (next working day)"},
-            [c("A"), m("1.3")],
+            [c("A"), m("1.3"), m("1.1")],  # 1.1 cited for the retained working-day definition (D6)
             ["Circular MS/2026/17 item A (effective 01 Aug 2026) replaced master clause 1.1."],
         )
     return Rule({"instant_addon": None, "default": "T+1 (next working day)"}, [m("1.1"), m("1.3")])
@@ -139,10 +130,38 @@ def per_txn_limit(as_of: date) -> Rule:
 def daily_limit(as_of: date) -> Rule:
     check_in_force(as_of)
     if circular_in_force(as_of):
-        return Rule({"amount": DAILY_LIMIT, "or_bank_limit_if_lower": True}, [c("E")],
+        return Rule({"amount": DAILY_LIMIT, "or_bank_limit_if_lower": True}, [m("4.3"), c("E")],
                     ["Circular item E (effective 01 Aug 2026) amended clause 4.3: "
                      "₹1,00,000 or the customer's own bank limit, whichever is lower."])
     return Rule({"amount": DAILY_LIMIT, "or_bank_limit_if_lower": False}, [m("4.3")])
+
+
+# ---------------------------------------------------------------- clause status
+
+# master clause -> (circular item, effective date, what happened)
+AMENDMENTS = {
+    "1.1": ("A", CIRCULAR_EFFECTIVE, "replaced"),
+    "2.1": ("B", CIRCULAR_EFFECTIVE, "replaced"),
+    "2.3": ("C", CIRCULAR_EFFECTIVE, "replaced"),
+    "3.3": ("D", CIRCULAR_D_EFFECTIVE, "deleted"),
+    "4.3": ("E", CIRCULAR_EFFECTIVE, "amended"),
+}
+
+
+def clause_status(ref: str, as_of: date) -> Rule:
+    """Is master clause `ref` in force on `as_of`, or replaced/deleted/amended by the circular?"""
+    check_in_force(as_of)
+    cites = [m(ref)]
+    if ref in AMENDMENTS:
+        item, eff, action = AMENDMENTS[ref]
+        if as_of >= eff:
+            cites.append(c(item))
+            return Rule(action, cites,
+                        [f"Circular MS/2026/17 item {item} {action} clause {ref} "
+                         f"effective {eff:%d %b %Y}."])
+        return Rule(f"in force (will be {action} by circular item {item} from {eff:%d %b %Y})",
+                    cites + [c(item)] if as_of >= CIRCULAR_ISSUED else cites)
+    return Rule("in force", cites)
 
 
 # ---------------------------------------------------------------- closure
