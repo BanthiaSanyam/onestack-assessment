@@ -86,3 +86,19 @@ Clause 2.2 still says "subject to the cap in 2.3". I read that as pointing to 2.
 ## Approach
 
 **D27. Rules, not an LLM.** With 3 short documents and a 60-minute budget, hand-written intent rules over a date-versioned rule table are deterministic, fully offline and auditable. The trade-off is lower recall on phrasings I didn't anticipate, documented in WHERE_IT_BREAKS.md.
+
+## Implementation decisions (made while building)
+
+**D28. When is the status CONFLICT_RESOLVED?** When the answer relies on a circular item that superseded a master clause, or when the FAQ would give a different answer to this question. Otherwise it's ANSWERED. A change that is only *upcoming* (e.g. 3.3 on 20 Aug) is mentioned as a note but does not make it a conflict.
+
+**D29. Limits are checked before fees.** A payment above ₹2,00,000 is never priced. A payment between ₹1,00,000 and ₹2,00,000 is priced only "if permitted", after the limit and KYC explanation.
+
+**D30. `ask()` is stateless.** The brief's Q3 says "Same merchant", but a stateless function can't know that. Rather than guess, it shows both bands. The demo also runs an explicit "large merchant" version.
+
+**D31. Several dates in one question.** If no `as_of_date` is passed and the question names several dates ("on 20 Aug and on 5 Sep"), each is answered separately and the results are merged. This is the wrong behaviour for a sale and refund on different dates (WHERE_IT_BREAKS #2).
+
+**D32. Merchant band words vs stated volume.** If a question says "small merchant" but states a volume above ₹10 lakh, the volume decides (the policy defines bands by volume) and the answer says so.
+
+**D33. Unrouted questions fail closed.** If no handler matches, the answer is CANNOT_ANSWER, never a best-effort guess.
+
+**D34. "Same day" for refunds** is treated as within 24 hours; "next day" is left unknown (it could be under or over 24h), which gives the "it depends" answer.

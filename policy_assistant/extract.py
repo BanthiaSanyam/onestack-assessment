@@ -1,8 +1,3 @@
-"""Pull structured facts out of a free-text question with plain regexes.
-
-Nothing here guesses: if a fact is not stated, the field stays None and the
-assistant answers for every case (e.g. both merchant bands) instead.
-"""
 from __future__ import annotations
 
 import re
@@ -25,6 +20,7 @@ _VOLUME_AFTER = re.compile(r"^\W*(monthly|per month|a month|in monthly|of monthl
 # the volume word must sit right before the amount: "monthly volume of ₹12 lakh", "turnover is ₹8 lakh"
 _VOLUME_BEFORE = re.compile(
     r"(volume|turnover|monthly|per month|a month)\s*(of|is|was|at|about|around|=|:)?\s*"
+    r"(exactly|just|approximately|roughly)?\s*"
     r"(above|over|more than|exceeding|greater than|up to|upto|below|under|less than|at most)?\s*$", re.I)
 _ABOVE_BEFORE = re.compile(r"(above|over|more than|exceeding|greater than)\s*$", re.I)
 _BELOW_BEFORE = re.compile(r"(up to|upto|below|under|less than|at most)\s*$", re.I)

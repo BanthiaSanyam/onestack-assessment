@@ -1,9 +1,3 @@
-"""ask(question, as_of_date) -> Answer.
-
-Routing is hand-written keyword rules (DECISIONS D27). Every handler gets its facts from
-`rules` (date-versioned) and its numbers from `calc` (Decimal), so the answer text is
-assembled from verified pieces only. Anything not matched returns CANNOT_ANSWER.
-"""
 from __future__ import annotations
 
 import re
@@ -154,8 +148,8 @@ def _faq_policy_cites(d: date, topic: str) -> list[Citation]:
 
 
 _FAQ_TOPICS = [
+    ("refund", (r"refund",), _faq_refund),  # before fees: "refund ... reverse the fee" is a refund question
     ("fees", (r"\bcap\b", r"\bmdr\b", r"\bfee", r"\bcharge", r"\bpay on\b", r"\brate\b", r"upper limit"), _faq_fees),
-    ("refund", (r"refund",), _faq_refund),
     ("settlement", (r"settle", r"\bupi money\b", r"when will i get", r"receive"), _faq_settlement),
     ("limits", (r"\blimit", r"maximum", r"how much can"), _faq_limits),
     ("closure", (r"\bclos",), _faq_closure),
@@ -260,6 +254,9 @@ def _limit_check_lines(amount: Decimal, f: Facts, b: _Builder) -> bool:
               f"({inr(lim['enhanced'])}, clauses 4.1 and 4.2), so this payment cannot be accepted and no "
               "MDR arises.")
         return False
+    cite, _, _ = _faq_limits(b.as_of)
+    b.conflict("The FAQ says Insurance and Capital Markets merchants can accept ₹2,00,000 without "
+               "mentioning the enhanced-KYC condition in clause 4.4.", cite)
     b.say(f"{inr(amount)} is above the standard UPI per-transaction limit of {inr(lim['standard'])} "
           f"(clause 4.1). Only merchants in the Capital Markets or Insurance categories that have completed "
           f"enhanced KYC may accept up to {inr(lim['enhanced'])} (clauses 4.2 and 4.4).")
@@ -429,7 +426,7 @@ _OUT_OF_SCOPE = [
     (r"\bholiday(s)?\b.*\b(list|which|calendar|is .* a)\b|\bis .* a (bank )?holiday",
      "The documents refer to bank holidays but contain no holiday calendar.", ("1.3",)),
     (r"\b(neft|imps|rtgs|wallet|international|foreign|forex|cross[- ]border|emi|crypto|net ?banking|"
-     r"interest|penalt|late fee|tds|income tax|loan|credit line)\b",
+     r"interest|penalt\w*|late fee|tds|income tax|loan|credit line)\b",
      "This topic is not covered by the policy documents.", ()),
 ]
 
